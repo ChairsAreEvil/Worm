@@ -2,10 +2,9 @@ import pygame
 from constants import *
 
 def main():
-    # print(f"Starting Worm with pygame version: {pygame.version.ver}")
-    # print(f"Screen Height: {SCREEN_HEIGHT}")
-    # print(f"Screen Width: {SCREEN_WIDTH}")
     pygame.init()
+    clock = pygame.time.Clock()
+    dt = 0.0
     screen = pygame.display.set_mode((SCREEN_WIDTH, SCREEN_HEIGHT))
 
     running = True
@@ -15,7 +14,10 @@ def main():
                 return
         screen.fill("black")
 
+
         pygame.display.flip()
+
+        dt = clock.tick(60) / 1000
 
 
 
