@@ -1,4 +1,4 @@
-import pygame, sys, random
+import pygame, sys, random, os
 from constants import *
 
 
@@ -9,9 +9,18 @@ class Worm():
         self.grow = False
 
     def draw(self, screen):
+        index = 0
         for segment in self.body:
-            segment_rect = (OFFSET + segment.x * CELL_SIZE, OFFSET + segment.y * CELL_SIZE, CELL_SIZE, CELL_SIZE)
-            pygame.draw.rect(screen, "pink", segment_rect, 0, 7)
+            if index == 0:
+                segment_rect = (OFFSET + segment.x * CELL_SIZE, OFFSET + segment.y * CELL_SIZE, CELL_SIZE, CELL_SIZE)
+                pygame.draw.rect(screen, "pink2", segment_rect, 0, 7)
+            elif len(self.body) >=8 and index != 0 and index % (len(self.body)//4) == 0:
+                segment_rect = (OFFSET + segment.x * CELL_SIZE, OFFSET + segment.y * CELL_SIZE, CELL_SIZE, CELL_SIZE)
+                pygame.draw.rect(screen, "pink4", segment_rect, 0, 7)
+            else:
+                segment_rect = (OFFSET + segment.x * CELL_SIZE, OFFSET + segment.y * CELL_SIZE, CELL_SIZE, CELL_SIZE)
+                pygame.draw.rect(screen, "pink", segment_rect, 0, 7)
+            index += 1
 
     def update(self):
         self.body.insert(0, self.body[0] + self.direction)

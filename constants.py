@@ -1,3 +1,5 @@
 CELL_SIZE = 30
 NUMBER_OF_CELLS = 25
 OFFSET = 75
+
+HIGHSCORE_FILE = "highscore.txt"
