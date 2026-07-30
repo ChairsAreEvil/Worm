@@ -3,3 +3,6 @@ NUMBER_OF_CELLS = 25
 OFFSET = 75
 
 HIGHSCORE_FILE = "highscore.txt"
+
+RED = (199, 55, 47)
+GREEN = (168, 228, 160)
