@@ -141,12 +141,13 @@ class Food():
 
 
 class Game():
-    def __init__(self, high_score):
+    def __init__(self, high_score, is_menu):
         self.worm = Worm()
         self.food = Food(self.worm.body)
         self.state = "RUNNING"
         self.score = 0
         self.high_score = high_score
+        self.is_menu = is_menu
 
     def draw(self, screen):
         self.worm.draw(screen)
@@ -154,7 +155,11 @@ class Game():
 
     def update(self):
         if self.state == "RUNNING":
-            self.worm.update()
+            if self.is_menu:
+                self.worm.wander()
+                self.worm.update()
+            else:
+                self.worm.update()
             self.collide_with_food()
             self.collide_with_wall()
             self.collide_with_body()
@@ -222,10 +227,10 @@ def main():
 
     screen = pygame.display.set_mode((2*OFFSET + CELL_SIZE * NUMBER_OF_CELLS, 2*OFFSET + CELL_SIZE * NUMBER_OF_CELLS))
 
-    game = Game(high_score)
+    game = Game(high_score, False)
 
-    menu_worm = Worm()
-    menu_worm.body = [pygame.Vector2(6, 9), pygame.Vector2(5, 9), pygame.Vector2(4, 9)]
+    menu_game = Game(high_score, True)
+    menu_game.worm.body = [pygame.Vector2(6, 9), pygame.Vector2(5, 9), pygame.Vector2(4, 9)]
 
     WORM_UPDATE = pygame.USEREVENT
     pygame.time.set_timer(WORM_UPDATE, 200)
@@ -240,11 +245,10 @@ def main():
 
             if app_state == "MENU":
                 if event.type == WORM_UPDATE:
-                    menu_worm.wander()
-                    menu_worm.update()
+                    menu_game.update()
                 if event.type == pygame.KEYDOWN and event.key == pygame.K_SPACE:
                     app_state = "PLAYING"
-                    game = Game(high_score)
+                    game = Game(high_score, False)
                 if event.type == pygame.KEYDOWN and event.key == pygame.K_ESCAPE:
                     pygame.quit()
                     sys.exit()
@@ -273,7 +277,7 @@ def main():
 
         if app_state == "MENU":
             draw_menu(screen, title_font, score_font, high_score)
-            menu_worm.draw(screen)
+            menu_game.draw(screen)
         else:
             screen.fill("black")
             pygame.draw.rect(screen, "white", (OFFSET-5, OFFSET-5, CELL_SIZE*NUMBER_OF_CELLS+10, CELL_SIZE*NUMBER_OF_CELLS+10), 5)
