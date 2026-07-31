@@ -19,6 +19,20 @@ def save_high_score(score):
     except OSError:
         pass
 
+def draw_menu(screen, title_font, score_font, high_score):
+    screen.fill("black")
+    title_surface = title_font.render("Worm", True, "pink")
+    screen.blit(title_surface, (OFFSET - 5, 20))
+
+    start_prompt_surface = score_font.render("Press SPACE to play", True, "pink")
+    screen.blit(start_prompt_surface, (OFFSET, 200))
+
+    exit_prompt_surface = score_font.render("Press ESC to exit", True, "pink")
+    screen.blit(exit_prompt_surface, (OFFSET, 250))
+
+    high_score_surface = score_font.render(f"High Score: {high_score}", True, "pink")
+    screen.blit(high_score_surface, (OFFSET + 545, 40))#(OFFSET, 300))
+
 
 class Worm():
     def __init__(self):
@@ -54,8 +68,44 @@ class Worm():
             self.body = self.body[:-1]
 
     def reset(self):
-        self.body = [pygame.Vector2(6, 9), pygame.Vector2(5, 9), pygame.Vector2(4, 9)]
-        self.direction = pygame.Vector2(1, 0)
+        self.body = [pygame.Vector2(6, 9)]#, pygame.Vector2(5, 9), pygame.Vector2(4, 9)]
+        self.next_direction = pygame.Vector2(1, 0)
+
+    def wander(self):
+        up = pygame.Vector2(0, -1)
+        down = pygame.Vector2(0, 1)
+        left = pygame.Vector2(-1, 0)
+        right = pygame.Vector2(1, 0)
+
+        if self.direction == up: # Currently Moving Up
+            valid_dirs = self.valid_directions([up, up, up, left, right])
+            self.next_direction = random.choice(valid_dirs)
+
+        elif self.direction == down: # Currently Moving Down
+            valid_dirs = self.valid_directions([down, down, down, left, right])
+            self.next_direction = random.choice(valid_dirs)
+
+        elif self.direction == left: # Currently Moving Left
+            valid_dirs = self.valid_directions([left, left, left, up, down])
+            self.next_direction = random.choice(valid_dirs)
+
+        elif self.direction == right: # Currently Moving Right
+            valid_dirs = self.valid_directions([right, right, right, up, down])
+            self.next_direction = random.choice(valid_dirs)
+
+    def is_valid_direction(self, direction):
+        next_pos = self.body[0] + direction
+
+        if next_pos.x == NUMBER_OF_CELLS or next_pos.x == -1:
+            return False
+        if next_pos.y == NUMBER_OF_CELLS or next_pos.y == -1:
+            return False
+
+        return True
+
+    def valid_directions(self, directions):
+        valid_dirs = [dir for dir in directions if self.is_valid_direction(dir)]
+        return valid_dirs
 
 
 
@@ -161,6 +211,8 @@ def main():
     title_font = pygame.font.Font(None, 60)
     score_font = pygame.font.Font(None, 40)
 
+    app_state = "MENU"
+
     clock = pygame.time.Clock()
     dt = 0.0
 
@@ -172,6 +224,8 @@ def main():
 
     game = Game(high_score)
 
+    menu_worm = Worm()
+    menu_worm.body = [pygame.Vector2(6, 9), pygame.Vector2(5, 9), pygame.Vector2(4, 9)]
 
     WORM_UPDATE = pygame.USEREVENT
     pygame.time.set_timer(WORM_UPDATE, 200)
@@ -180,25 +234,59 @@ def main():
     running = True
     while running:
         for event in pygame.event.get():
-            if game.state == "STOPPED":
-                if event.type == pygame.KEYDOWN:
-                    game.state = "RUNNING"
-            if event.type == WORM_UPDATE:
-                game.update()
             if event.type == pygame.QUIT:
                 pygame.quit()
                 sys.exit()
 
+            if app_state == "MENU":
+                if event.type == WORM_UPDATE:
+                    menu_worm.wander()
+                    menu_worm.update()
+                if event.type == pygame.KEYDOWN and event.key == pygame.K_SPACE:
+                    app_state = "PLAYING"
+                    game = Game(high_score)
+                if event.type == pygame.KEYDOWN and event.key == pygame.K_ESCAPE:
+                    pygame.quit()
+                    sys.exit()
 
-        screen.fill("black")
-        pygame.draw.rect(screen, "white", (OFFSET-5, OFFSET-5, CELL_SIZE*NUMBER_OF_CELLS+10, CELL_SIZE*NUMBER_OF_CELLS+10), 5)
-        game.draw(screen)
-        title_surface = title_font.render("Worm", True, "pink")
-        screen.blit(title_surface, (OFFSET - 5, 20))
-        score_surface = score_font.render(f"Score: {game.score}", True, "pink")
-        screen.blit(score_surface, (OFFSET - 5, OFFSET + CELL_SIZE * NUMBER_OF_CELLS + 10))
-        high_score_surface = score_font.render(f"High Score: {game.high_score}", True, "pink")
-        screen.blit(high_score_surface, (OFFSET + 545, 40))
+            elif app_state == "PLAYING":
+                if event.type == pygame.KEYDOWN and event.key == pygame.K_ESCAPE:
+                    app_state = "MENU"
+
+                if event.type == pygame.KEYDOWN and event.key == pygame.K_r:
+                    game.worm.reset()
+                    game.score = 0
+                    game.state = "STOPPED"
+
+                if event.type == pygame.KEYDOWN and event.key == pygame.K_p:
+                    if game.state == "STOPPED":
+                        game.state = "RUNNING"
+                    elif game.state == "RUNNING":
+                        game.state = "STOPPED"
+
+                if game.state == "STOPPED":
+                    if event.type == pygame.KEYDOWN and event.key not in (pygame.K_ESCAPE, pygame.K_p, pygame.K_r):
+                        game.state = "RUNNING"
+
+                if event.type == WORM_UPDATE:
+                    game.update()
+
+        if app_state == "MENU":
+            draw_menu(screen, title_font, score_font, high_score)
+            menu_worm.draw(screen)
+        else:
+            screen.fill("black")
+            pygame.draw.rect(screen, "white", (OFFSET-5, OFFSET-5, CELL_SIZE*NUMBER_OF_CELLS+10, CELL_SIZE*NUMBER_OF_CELLS+10), 5)
+            game.draw(screen)
+
+            title_surface = title_font.render("Worm", True, "pink")
+            screen.blit(title_surface, (OFFSET - 5, 20))
+
+            score_surface = score_font.render(f"Score: {game.score}", True, "pink")
+            screen.blit(score_surface, (OFFSET - 5, OFFSET + CELL_SIZE * NUMBER_OF_CELLS + 10))
+
+            high_score_surface = score_font.render(f"High Score: {game.high_score}", True, "pink")
+            screen.blit(high_score_surface, (OFFSET + 545, 40))
 
         keys = pygame.key.get_pressed()
         if (keys[pygame.K_w] or keys[pygame.K_UP]) and game.worm.direction != pygame.Vector2(0, 1):
@@ -209,13 +297,6 @@ def main():
             game.worm.next_direction = pygame.Vector2(-1, 0)
         if (keys[pygame.K_d] or keys[pygame.K_RIGHT]) and game.worm.direction != pygame.Vector2(-1, 0):
             game.worm.next_direction = pygame.Vector2(1, 0)
-
-        if keys[pygame.K_p]:
-            game.state = "STOPPED"
-
-        if keys[pygame.K_ESCAPE]:
-            pygame.quit()
-            sys.exit()
 
 
         pygame.display.flip()
