@@ -198,6 +198,12 @@ class Game():
                     self.score -= len(lost) * 10
                 i += 1
 
+    def calculate_interval(self):
+        interval = 200 - (self.score // 10)
+        if interval < 100:
+            interval = 100
+        return interval
+
     def game_over(self):
         self.worm.reset()
         self.food.pos = self.food.generate_random_pos(self.worm.body)
@@ -233,7 +239,8 @@ def main():
     menu_game.worm.body = [pygame.Vector2(6, 9), pygame.Vector2(5, 9), pygame.Vector2(4, 9)]
 
     WORM_UPDATE = pygame.USEREVENT
-    pygame.time.set_timer(WORM_UPDATE, 200)
+    interval = 200
+    pygame.time.set_timer(WORM_UPDATE, interval)
 
 
     running = True
@@ -246,9 +253,15 @@ def main():
             if app_state == "MENU":
                 if event.type == WORM_UPDATE:
                     menu_game.update()
+                    new_interval = menu_game.calculate_interval()
+                    if new_interval != interval:
+                        pygame.time.set_timer(WORM_UPDATE, new_interval)
+                        interval = new_interval
                 if event.type == pygame.KEYDOWN and event.key == pygame.K_SPACE:
                     app_state = "PLAYING"
                     game = Game(high_score, False)
+                    interval = 200
+                    pygame.time.set_timer(WORM_UPDATE, interval)
                 if event.type == pygame.KEYDOWN and event.key == pygame.K_ESCAPE:
                     pygame.quit()
                     sys.exit()
@@ -274,6 +287,10 @@ def main():
 
                 if event.type == WORM_UPDATE:
                     game.update()
+                    new_interval = game.calculate_interval()
+                    if new_interval != interval:
+                        pygame.time.set_timer(WORM_UPDATE, new_interval)
+                        interval = new_interval
 
         if app_state == "MENU":
             draw_menu(screen, title_font, score_font, high_score)
