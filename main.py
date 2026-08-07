@@ -1,4 +1,7 @@
-import pygame, sys, random, os
+import os
+os.environ["SDL_AUDIODRIVER"] = "pulse" #needed to make sounds work in WSL
+
+import pygame, sys, random
 from constants import *
 
 
@@ -36,7 +39,7 @@ def draw_menu(screen, title_font, score_font, high_score):
 
 class Worm():
     def __init__(self):
-        self.body = [pygame.Vector2(6, 9)]#, pygame.Vector2(5, 9), pygame.Vector2(4, 9)]
+        self.body = [pygame.Vector2(6, 9)]
         self.direction = pygame.Vector2(1, 0)
         self.next_direction = self.direction
         self.grow = False
@@ -68,7 +71,7 @@ class Worm():
             self.body = self.body[:-1]
 
     def reset(self):
-        self.body = [pygame.Vector2(6, 9)]#, pygame.Vector2(5, 9), pygame.Vector2(4, 9)]
+        self.body = [pygame.Vector2(6, 9)]
         self.next_direction = pygame.Vector2(1, 0)
 
     def wander(self):
@@ -115,14 +118,11 @@ class Food():
         self.is_super = False
 
     def draw(self, screen):
-        #food_rect = pygame.Rect(OFFSET + self.pos.x * CELL_SIZE, OFFSET + self.pos.y * CELL_SIZE, CELL_SIZE, CELL_SIZE) # --- if food is rounded square
-        food_rect = pygame.Rect(OFFSET + self.pos.x * CELL_SIZE + 5 , OFFSET + self.pos.y * CELL_SIZE + 5, CELL_SIZE - 10, CELL_SIZE - 10) # --- if food is circle
+        food_rect = pygame.Rect(OFFSET + self.pos.x * CELL_SIZE + 5 , OFFSET + self.pos.y * CELL_SIZE + 5, CELL_SIZE - 10, CELL_SIZE - 10)
         if self.is_super:
-            #pygame.draw.rect(screen, "green", food_rect, 0, 7) # --- makes food rounded square
-            pygame.draw.rect(screen, GREEN, food_rect, 0, 15) # --- makes food circle
+            pygame.draw.rect(screen, GREEN, food_rect, 0, 15)
         else:
-            #pygame.draw.rect(screen, "red", food_rect, 0, 7) # --- makes food rounded square
-            pygame.draw.rect(screen, RED, food_rect, 0, 15) # --- makes food circle
+            pygame.draw.rect(screen, RED, food_rect, 0, 15)
 
     def generate_random_cell(self):
         x = random.randint(0, NUMBER_OF_CELLS - 1)
@@ -141,13 +141,15 @@ class Food():
 
 
 class Game():
-    def __init__(self, high_score, is_menu):
+    def __init__(self, high_score, is_menu, munch_sfx, super_munch_sfx):
         self.worm = Worm()
         self.food = Food(self.worm.body)
         self.state = "RUNNING"
         self.score = 0
         self.high_score = high_score
         self.is_menu = is_menu
+        self.munch_sfx = munch_sfx
+        self.super_munch_sfx = super_munch_sfx
 
     def draw(self, screen):
         self.worm.draw(screen)
@@ -171,8 +173,11 @@ class Game():
             self.worm.grow = True
             if super_food:
                 self.worm.super_grow = True
-                self.score += 10
+                self.score += 20
+                pygame.mixer.Sound.play(self.super_munch_sfx)
+                return
             self.score += 10
+            pygame.mixer.Sound.play(self.munch_sfx)
 
     def collide_with_wall(self):
         if self.worm.body[0].x == NUMBER_OF_CELLS or self.worm.body[0].x == -1:
@@ -180,13 +185,6 @@ class Game():
         if self.worm.body[0].y == NUMBER_OF_CELLS or self.worm.body[0].y == -1:
             self.game_over()
 
-    # --- original body collision ---
-    #def collide_with_body(self):
-    #    headless_body = self.worm.body[1:]
-    #    if self.worm.body[0] in headless_body:
-    #        self.game_over()
-
-    # --- new body slicing on collision ---
     def collide_with_body(self):
         headless_body = self.worm.body[1:]
         i = 0
@@ -218,6 +216,15 @@ class Game():
 
 def main():
     pygame.init()
+    pygame.mixer.init()
+
+    munch_sfx = pygame.mixer.Sound("Sounds/munch.wav")
+    super_munch_sfx = pygame.mixer.Sound("Sounds/super_munch.wav")
+
+    pygame.mixer.music.load("Sounds/WormMusic.ogg")
+    pygame.mixer.music.play(-1)
+    pygame.mixer.music.set_volume(0.7)
+    pygame.mixer.music.pause()
 
     title_font = pygame.font.Font(None, 60)
     score_font = pygame.font.Font(None, 40)
@@ -233,9 +240,9 @@ def main():
 
     screen = pygame.display.set_mode((2*OFFSET + CELL_SIZE * NUMBER_OF_CELLS, 2*OFFSET + CELL_SIZE * NUMBER_OF_CELLS))
 
-    game = Game(high_score, False)
+    game = Game(high_score, False, munch_sfx, super_munch_sfx)
 
-    menu_game = Game(high_score, True)
+    menu_game = Game(high_score, True, munch_sfx, super_munch_sfx)
     menu_game.worm.body = [pygame.Vector2(6, 9), pygame.Vector2(5, 9), pygame.Vector2(4, 9)]
 
     WORM_UPDATE = pygame.USEREVENT
@@ -259,7 +266,8 @@ def main():
                         interval = new_interval
                 if event.type == pygame.KEYDOWN and event.key == pygame.K_SPACE:
                     app_state = "PLAYING"
-                    game = Game(high_score, False)
+                    pygame.mixer.music.unpause()
+                    game = Game(high_score, False, munch_sfx, super_munch_sfx)
                     interval = 200
                     pygame.time.set_timer(WORM_UPDATE, interval)
                 if event.type == pygame.KEYDOWN and event.key == pygame.K_ESCAPE:
@@ -269,6 +277,7 @@ def main():
             elif app_state == "PLAYING":
                 if event.type == pygame.KEYDOWN and event.key == pygame.K_ESCAPE:
                     app_state = "MENU"
+                    pygame.mixer.music.pause()
 
                 if event.type == pygame.KEYDOWN and event.key == pygame.K_r:
                     game.worm.reset()
