@@ -74,7 +74,7 @@ class Worm():
         self.body = [pygame.Vector2(6, 9)]
         self.next_direction = pygame.Vector2(1, 0)
 
-    def wander(self):
+    def wander(self, food_pos):
         up = pygame.Vector2(0, -1)
         down = pygame.Vector2(0, 1)
         left = pygame.Vector2(-1, 0)
@@ -82,19 +82,27 @@ class Worm():
 
         if self.direction == up: # Currently Moving Up
             valid_dirs = self.valid_directions([up, up, up, left, right])
-            self.next_direction = random.choice(valid_dirs)
+            closer_dirs = self.closer_directions(valid_dirs, food_pos)
+            all_dirs = valid_dirs + closer_dirs + closer_dirs
+            self.next_direction = random.choice(all_dirs)
 
         elif self.direction == down: # Currently Moving Down
             valid_dirs = self.valid_directions([down, down, down, left, right])
-            self.next_direction = random.choice(valid_dirs)
+            closer_dirs = self.closer_directions(valid_dirs, food_pos)
+            all_dirs = valid_dirs + closer_dirs + closer_dirs
+            self.next_direction = random.choice(all_dirs)
 
         elif self.direction == left: # Currently Moving Left
             valid_dirs = self.valid_directions([left, left, left, up, down])
-            self.next_direction = random.choice(valid_dirs)
+            closer_dirs = self.closer_directions(valid_dirs, food_pos)
+            all_dirs = valid_dirs + closer_dirs + closer_dirs
+            self.next_direction = random.choice(all_dirs)
 
         elif self.direction == right: # Currently Moving Right
             valid_dirs = self.valid_directions([right, right, right, up, down])
-            self.next_direction = random.choice(valid_dirs)
+            closer_dirs = self.closer_directions(valid_dirs, food_pos)
+            all_dirs = valid_dirs + closer_dirs + closer_dirs
+            self.next_direction = random.choice(all_dirs)
 
     def is_valid_direction(self, direction):
         next_pos = self.body[0] + direction
@@ -110,6 +118,18 @@ class Worm():
         valid_dirs = [dir for dir in directions if self.is_valid_direction(dir)]
         return valid_dirs
 
+    def gets_closer(self, direction, food_pos):
+        head = self.body[0]
+        next_pos = head + direction
+
+        current_distance = abs(head.x - food_pos.x) + abs(head.y - food_pos.y)
+        next_distance = abs(next_pos.x - food_pos.x) + abs(next_pos.y - food_pos.y)
+
+        return next_distance < current_distance
+
+    def closer_directions(self, directions, food_pos):
+        closer_dirs = [dir for dir in directions if self.gets_closer(dir, food_pos)]
+        return closer_dirs
 
 
 class Food():
@@ -158,7 +178,7 @@ class Game():
     def update(self):
         if self.state == "RUNNING":
             if self.is_menu:
-                self.worm.wander()
+                self.worm.wander(self.food.pos)
                 self.worm.update()
             else:
                 self.worm.update()
@@ -208,8 +228,8 @@ class Game():
         if self.score > self.high_score:
             self.high_score = self.score
             save_high_score(self.high_score)
-        self.state = "STOPPED"
-        self.score = 0
+        self.state = "DEAD"
+        pygame.mixer.music.pause()
 
 
 
@@ -294,6 +314,17 @@ def main():
                     if event.type == pygame.KEYDOWN and event.key not in (pygame.K_ESCAPE, pygame.K_p, pygame.K_r):
                         game.state = "RUNNING"
 
+                if game.state == "DEAD":
+                    if event.type == pygame.KEYDOWN and event.key == pygame.K_SPACE:
+                        app_state = "PLAYING"
+                        pygame.mixer.music.unpause()
+                        game = Game(high_score, False, munch_sfx, super_munch_sfx)
+                        interval = 200
+                        pygame.time.set_timer(WORM_UPDATE, interval)
+                    if event.type == pygame.KEYDOWN and event.key == pygame.K_ESCAPE:
+                        pygame.quit()
+                        sys.exit()
+
                 if event.type == WORM_UPDATE:
                     game.update()
                     new_interval = game.calculate_interval()
@@ -304,6 +335,24 @@ def main():
         if app_state == "MENU":
             draw_menu(screen, title_font, score_font, high_score)
             menu_game.draw(screen)
+
+        elif game.state == "DEAD":
+            screen.fill("black")
+            title_surface = title_font.render("Game Over", True, "pink")
+            screen.blit(title_surface, (CELL_SIZE * NUMBER_OF_CELLS // 2 - 40, 100))
+        
+            start_prompt_surface = score_font.render("Press SPACE to continue", True, "pink")
+            screen.blit(start_prompt_surface, (CELL_SIZE * NUMBER_OF_CELLS // 2 - 90, 200))
+            
+            exit_prompt_surface = score_font.render("Press ESC to exit", True, "pink")
+            screen.blit(exit_prompt_surface, (CELL_SIZE * NUMBER_OF_CELLS // 2 - 40, 250))
+
+            score_surface = score_font.render(f"Score: {game.score}", True, "pink")
+            screen.blit(score_surface, (CELL_SIZE * NUMBER_OF_CELLS // 2 - 100, 300))
+            
+            high_score_surface = score_font.render(f"High Score: {game.high_score}", True, "pink")
+            screen.blit(high_score_surface, (OFFSET + 400, 300))
+
         else:
             screen.fill("black")
             pygame.draw.rect(screen, "white", (OFFSET-5, OFFSET-5, CELL_SIZE*NUMBER_OF_CELLS+10, CELL_SIZE*NUMBER_OF_CELLS+10), 5)
