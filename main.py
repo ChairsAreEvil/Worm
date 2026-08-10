@@ -161,12 +161,12 @@ class Food():
 
 
 class Game():
-    def __init__(self, high_score, is_menu, munch_sfx, super_munch_sfx):
+    def __init__(self, is_menu, munch_sfx, super_munch_sfx):
         self.worm = Worm()
         self.food = Food(self.worm.body)
         self.state = "RUNNING"
         self.score = 0
-        self.high_score = high_score
+        self.high_score = load_high_score()
         self.is_menu = is_menu
         self.munch_sfx = munch_sfx
         self.super_munch_sfx = super_munch_sfx
@@ -260,9 +260,9 @@ def main():
 
     screen = pygame.display.set_mode((2*OFFSET + CELL_SIZE * NUMBER_OF_CELLS, 2*OFFSET + CELL_SIZE * NUMBER_OF_CELLS))
 
-    game = Game(high_score, False, munch_sfx, super_munch_sfx)
+    game = Game(False, munch_sfx, super_munch_sfx)
 
-    menu_game = Game(high_score, True, munch_sfx, super_munch_sfx)
+    menu_game = Game(True, munch_sfx, super_munch_sfx)
     menu_game.worm.body = [pygame.Vector2(6, 9), pygame.Vector2(5, 9), pygame.Vector2(4, 9)]
 
     WORM_UPDATE = pygame.USEREVENT
@@ -287,7 +287,7 @@ def main():
                 if event.type == pygame.KEYDOWN and event.key == pygame.K_SPACE:
                     app_state = "PLAYING"
                     pygame.mixer.music.unpause()
-                    game = Game(high_score, False, munch_sfx, super_munch_sfx)
+                    game = Game(False, munch_sfx, super_munch_sfx)
                     interval = 200
                     pygame.time.set_timer(WORM_UPDATE, interval)
                 if event.type == pygame.KEYDOWN and event.key == pygame.K_ESCAPE:
@@ -318,7 +318,7 @@ def main():
                     if event.type == pygame.KEYDOWN and event.key == pygame.K_SPACE:
                         app_state = "PLAYING"
                         pygame.mixer.music.unpause()
-                        game = Game(high_score, False, munch_sfx, super_munch_sfx)
+                        game = Game(False, munch_sfx, super_munch_sfx)
                         interval = 200
                         pygame.time.set_timer(WORM_UPDATE, interval)
                     if event.type == pygame.KEYDOWN and event.key == pygame.K_ESCAPE:
@@ -333,7 +333,7 @@ def main():
                         interval = new_interval
 
         if app_state == "MENU":
-            draw_menu(screen, title_font, score_font, high_score)
+            draw_menu(screen, title_font, score_font, game.high_score)
             menu_game.draw(screen)
 
         elif game.state == "DEAD":
